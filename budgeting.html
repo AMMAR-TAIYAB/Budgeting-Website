@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budgeting Website</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-image: url('back.jpg'); /* Replace with your image URL */
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.4); /* Semi-transparent background */
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 70%;
+            margin: auto;
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.76);
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(255, 255, 255, 0.1); /* Subtle shadow */
+            margin-bottom: 20px;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container my-5">
+        <h1 class="text-center mb-4">Budgeting Tracker</h1>
+    
+        <!-- Toggle Buttons -->
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="showCard('inputOptionsCard')">Input Options</button>
+            <button class="btn btn-secondary" onclick="showCard('budgetChartCard')">Budget Distribution</button>
+            <button class="btn btn-success" onclick="showCard('monthlySummaryCard')">Monthly Summary</button>
+        </div>
+    
+        <!-- Input Options Card -->
+        <div id="inputOptionsCard" class="card p-4">
+            <h5 class="card-title mb-4">Enter Your Budget Details</h5>
+    
+            <!-- Month Selection -->
+            <div class="mb-3">
+                <label for="month" class="form-label">Select Month</label>
+                <select id="month" class="form-select">
+                    <option value="January">January</option>
+                    <option value="February">February</option>
+                    <option value="March">March</option>
+                    <option value="April">April</option>
+                    <option value="May">May</option>
+                    <option value="June">June</option>
+                    <option value="July">July</option>
+                    <option value="August">August</option>
+                    <option value="September">September</option>
+                    <option value="October">October</option>
+                    <option value="November">November</option>
+                    <option value="December">December</option>
+                </select>
+            </div>
+    
+            <!-- Income Input -->
+            <div class="mb-3">
+                <label for="income" class="form-label">Income</label>
+                <input type="number" id="income" class="form-control" placeholder="Enter your income">
+            </div>
+    
+            <!-- Default Expenses -->
+            <div id="defaultExpenses">
+                <div class="mb-3">
+                    <label for="groceries" class="form-label">Groceries</label>
+                    <input type="number" id="groceries" class="form-control" placeholder="Enter amount spent on groceries">
+                </div>
+                <div class="mb-3">
+                    <label for="rent" class="form-label">Rent</label>
+                    <input type="number" id="rent" class="form-control" placeholder="Enter rent amount">
+                </div>
+                <div class="mb-3">
+                    <label for="emi" class="form-label">EMI</label>
+                    <input type="number" id="emi" class="form-control" placeholder="Enter EMI amount">
+                </div>
+                <div class="mb-3">
+                    <label for="bills" class="form-label">Bills</label>
+                    <input type="number" id="bills" class="form-control" placeholder="Enter bills amount">
+                </div>
+                <div class="mb-3">
+                    <label for="personal" class="form-label">Personal</label>
+                    <input type="number" id="personal" class="form-control" placeholder="Enter personal spending">
+                </div>
+            </div>
+    
+            <!-- Add Custom Expense -->
+            <div class="mb-3">
+                <label for="customExpenseName" class="form-label">Add Custom Expense</label>
+                <div class="input-group">
+                    <input type="text" id="customExpenseName" class="form-control" placeholder="Expense Name">
+                    <button id="addExpenseBtn" class="btn btn-outline-primary">Add</button>
+                </div>
+            </div>
+            <div id="customExpenses"></div>
+    
+            <!-- Update Budget Button -->
+            <button id="updateBudget" class="btn btn-primary mt-3">Update Budget</button>
+        </div>
+    
+        <!-- Budget Chart Card -->
+        <div id="budgetChartCard" class="card p-4" style="display: none;">
+            <h5 class="card-title mb-4 text-center">Budget Distribution</h5>
+            <canvas id="budgetChart" width="400" height="400"></canvas>
+        </div>
+    
+        <!-- Monthly Summary Card -->
+        <div id="monthlySummaryCard" class="card p-4" style="display: none;">
+            <h5 class="card-title mb-4 text-center">Monthly Income vs Expenses</h5>
+            <canvas id="monthlySummaryChart" width="400" height="400"></canvas>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    
+    <script>
+        // Initialize data storage
+        const budgetData = {};
+        const customExpenses = [];
+    
+        // Event Listener for "Add Custom Expense"
+        document.getElementById('addExpenseBtn').addEventListener('click', function () {
+            const expenseName = document.getElementById('customExpenseName').value.trim();
+            if (expenseName === '') {
+                alert('Please enter a valid expense name.');
+                return;
+            }
+    
+            // Create a new input field for the custom expense
+            const expenseId = `customExpense-${customExpenses.length}`;
+            const expenseHtml = `
+                <div class="mb-3" id="${expenseId}-container">
+                    <label for="${expenseId}" class="form-label">${expenseName}</label>
+                    <input type="number" id="${expenseId}" class="form-control" placeholder="Enter ${expenseName} amount">
+                </div>`;
+            document.getElementById('customExpenses').insertAdjacentHTML('beforeend', expenseHtml);
+    
+            // Store custom expense name
+            customExpenses.push(expenseName);
+    
+            // Clear the input
+            document.getElementById('customExpenseName').value = '';
+        });
+    
+        // Event Listener for "Update Budget"
+        document.getElementById('updateBudget').addEventListener('click', function () {
+            const month = document.getElementById('month').value;
+            const income = parseFloat(document.getElementById('income').value);
+            const groceries = parseFloat(document.getElementById('groceries').value) || 0;
+            const rent = parseFloat(document.getElementById('rent').value) || 0;
+            const emi = parseFloat(document.getElementById('emi').value) || 0;
+            const bills = parseFloat(document.getElementById('bills').value) || 0;
+            const personal = parseFloat(document.getElementById('personal').value) || 0;
+    
+            // Calculate custom expenses
+            let totalCustomExpenses = 0;
+            const customExpenseValues = {};
+            customExpenses.forEach((name, index) => {
+                const value = parseFloat(document.getElementById(`customExpense-${index}`).value) || 0;
+                customExpenseValues[name] = value;
+                totalCustomExpenses += value;
+            });
+    
+            // Validate income
+            if (isNaN(income) || income <= 0) {
+                alert('Please enter a valid income.');
+                return;
+            }
+    
+            // Calculate total expenses and savings
+            const totalExpenses = groceries + rent + emi + bills + personal + totalCustomExpenses;
+            const savings = income - totalExpenses;
+    
+            // Save data for the selected month
+            budgetData[month] = {
+                income,
+                totalExpenses,
+                customExpenseValues
+            };
+    
+            alert(`Budget details for ${month} have been saved!`);
+        });
+    
+        // Function to show the selected card
+        function showCard(cardId) {
+            document.getElementById('inputOptionsCard').style.display = 'none';
+            document.getElementById('budgetChartCard').style.display = 'none';
+            document.getElementById('monthlySummaryCard').style.display = 'none';
+    
+            document.getElementById(cardId).style.display = 'block';
+        }
+    </script>
+    
+    </body>
+    </html>
